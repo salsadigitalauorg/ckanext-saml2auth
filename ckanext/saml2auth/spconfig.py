@@ -11,8 +11,8 @@ def get_config():
     allow_unknown_attributes = \
         ckan_config.get(u'ckanext.saml2auth.allow_unknown_attributes', True)
     name_id_format = \
-        aslist(ckan_config.get(u'ckanext.saml2auth.sp.name_id_format',
-                               "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"))
+        ckan_config.get(u'ckanext.saml2auth.sp.name_id_format',
+                               "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent")
     location = \
         ckan_config.get(u'ckanext.saml2auth.idp_metadata.location')
     local_path = \
@@ -24,7 +24,7 @@ def get_config():
         ckan_config.get(u'ckanext.saml2auth.idp_metadata.remote_cert')
 
     config = {
-        u'entityid': u'urn:mace:umu.se:saml:ckan:sp',
+        u'entityid': u'urn:mace:umu.se:saml:qdes_ckan:sp',
         u'description': u'CKAN saml2 Service Provider',
         # Set True if eg.Azure or Microsoft Idp used
         u'allow_unknown_attributes': allow_unknown_attributes,
