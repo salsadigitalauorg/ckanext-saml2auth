@@ -14,6 +14,9 @@ from ckan.common import config, g, request
 from ckanext.saml2auth.spconfig import get_config as sp_config
 from ckanext.saml2auth import helpers as h
 
+import logging
+
+log = logging.getLogger(__name__)
 
 saml2auth = Blueprint(u'saml2auth', __name__)
 
@@ -37,6 +40,8 @@ def acs():
         config.get(u'ckanext.saml2auth.user_lastname')
     saml_user_email = \
         config.get(u'ckanext.saml2auth.user_email')
+    saml_user_group = \
+        config.get(u'ckanext.saml2auth.user_group', None)
 
     client = h.saml_client(sp_config())
     auth_response = client.parse_authn_request_response(
@@ -51,6 +56,19 @@ def acs():
     email = auth_response.ava[saml_user_email][0]
     firstname = auth_response.ava[saml_user_firstname][0]
     lastname = auth_response.ava[saml_user_lastname][0]
+    groups = None
+    # If saml_user_group is configured, user cannot login with out a successful SAML group mapping to either organisation_mapping or read_only_saml_groups
+    if saml_user_group:
+        groups = ['CG-FED-DDCAT-SDK-Read', 'CG-FED-DDCAT-SDK-ED1']
+        log.debug('Looking for SAML group with value: {}'.format(saml_user_group))
+        log.debug('SAML groups found: {}'.format(auth_response.ava[saml_user_group]))
+        # saml_user_group = [group for group in $auth_response.ava[saml_user_group]]
+        # If saml group does not exist in config for organisation_mapping or read_only_saml_groups, do not create/update/login in user
+        # If there is not configuration set up for config for organisation_mapping or read_only_saml_groups, it will return True to carry on login workflow
+        if not h.saml_group_mapping_exist(groups):
+            log.warning('User {0} {1} groups {2} does not exists'.format(firstname, lastname, groups))
+            toolkit.h.flash_error(toolkit._('Not authorized'))
+            return toolkit.h.redirect_to('user.login')
 
     # Check if CKAN-SAML user exists for the current SAML login
     saml_user = model.Session.query(model.User) \
@@ -118,6 +136,9 @@ def acs():
                 error_message = (e.error_summary or e.message or e.error_dict)
                 base.abort(400, error_message)
         g.user = user_dict['name']
+
+    if saml_user_group:
+        h.update_user_organasitions(g.user, groups)
 
     # If user email is in given list of emails
     # make that user sysadmin and opposite

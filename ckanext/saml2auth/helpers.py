@@ -9,7 +9,7 @@ from saml2.config import Config as Saml2Config
 
 import ckan.model as model
 import ckan.authz as authz
-from ckan.common import config, asbool, aslist
+from ckan.plugins.toolkit import config, asbool, aslist, get_action, get_converter
 
 log = logging.getLogger(__name__)
 
@@ -55,3 +55,79 @@ def activate_user_if_deleted(userobj):
         userobj.activate()
         userobj.commit()
         log.info(u'User {} reactivated'.format(userobj.name))
+
+
+def get_organisation_mapping():
+    return get_converter('json_or_string')(config.get('ckanext.saml2auth.organisation_mapping'))
+
+
+def get_read_only_saml_groups():
+    return aslist(config.get('ckanext.saml2auth.read_only_saml_groups'))
+
+
+def saml_group_mapping_exist(saml_groups):
+    organisation_mapping = get_organisation_mapping()
+    read_only_saml_groups = get_read_only_saml_groups()
+    if isinstance(saml_groups, list):
+        # If saml_groups exist and there is either organisation_mapping or read_only_saml_groups config set up, check to see if any saml_groups exist
+        # First check if organisation_mapping_exists, if this is false then check if read_only_saml_groups_exists
+        organisation_mapping_exists = any(saml_group for saml_group in saml_groups if saml_group in organisation_mapping) if isinstance(organisation_mapping, dict) else False
+        log.debug('organisation_mapping_exists: {0}'.format(organisation_mapping_exists))
+        read_only_saml_groups_exists = any(saml_group for saml_group in saml_groups if saml_group in read_only_saml_groups) if isinstance(read_only_saml_groups, list) else False
+        log.debug('read_only_saml_groups_exists: {0}'.format(read_only_saml_groups_exists))
+        return organisation_mapping_exists or read_only_saml_groups_exists
+    else:
+        # There are no SAML groups to find mappings, return false to stop login workflow
+        log.debug('No SAML groups')
+        return False
+
+
+def update_user_organasitions(user, saml_groups):
+    context = {
+        u'user': get_action('get_site_user')({'ignore_auth': True}, {})['name']
+    }
+    # Get organisations that the user has a permission for
+    organisation_list_for_user = get_action('organization_list_for_user')(context, {"id": user})
+    # Remove user's access from its current organisations, saml2 groups are the source of truth
+    remove_user_from_all_organisations(context, organisation_list_for_user, user)
+    # Load organisation_mapping config from CKAN.INI which will be in JSON format
+    organisation_mapping = get_organisation_mapping()
+    log.debug('Using organisation_mapping: {0}'.format(organisation_mapping))
+
+    if isinstance(organisation_mapping, dict) and isinstance(saml_groups, list):
+        for saml_group in saml_groups:
+            log.debug('Checking SAML group: {0}'.format(saml_group))
+            if saml_group in organisation_mapping:
+                organisation = organisation_mapping[saml_group]
+                log.debug('SAML group found in organisation_mapping: {0}'.format(organisation))
+                add_organisation_member(context, user, organisation.get('org_name', None), organisation.get('role', None))
+
+
+def remove_user_from_all_organisations(context, organisation_list_for_user, user):
+    log.debug('Removing {0} from all its current organasition roles'.format(user))
+    for organisation in organisation_list_for_user or []:
+        remove_organisation_member(context, user, organisation.get('name'), organisation.get('capacity'))
+
+
+def remove_organisation_member(context, user, org_name, role):
+    member_dict = {
+        'username': user,
+        'id': org_name,
+        'role': role,
+    }
+    log.debug('Removing {0} member role from organasation {1}'.format(user, member_dict))
+    get_action('organization_member_delete')(context, member_dict)
+
+
+def add_organisation_member(context, user, org_name, role):
+    # Only add a saml role if org_name has a value and the role exist in ckan roles list
+    if org_name != None and role in [role.get('value') for role in authz.roles_list()]:
+        member_dict = {
+            'username': user,
+            'id': org_name,
+            'role': role,
+        }
+        log.debug('Adding {0} member role to organasation: {1}'.format(user, member_dict))
+        get_action('organization_member_create')(context, member_dict)
+    else:
+        log.debug('Role does not exist in roles list: {0}'.format(role))
