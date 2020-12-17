@@ -67,7 +67,8 @@ def acs():
     groups = None
     # If saml_user_group is configured, user cannot login with out a successful SAML group mapping to either organisation_mapping or read_only_saml_groups
     if saml_user_group:
-        groups = ['CG-FED-DDCAT-SDK-Read', 'CG-FED-DDCAT-SDK-ED1']
+        # groups = ['CG-FED-DDCAT-SDK-Read', 'CG-FED-DDCAT-SDK-ED1']
+        groups = auth_response.ava[saml_user_group]
         log.debug('Looking for SAML group with value: {}'.format(saml_user_group))
         log.debug('SAML groups found: {}'.format(auth_response.ava[saml_user_group]))
         # saml_user_group = [group for group in $auth_response.ava[saml_user_group]]
