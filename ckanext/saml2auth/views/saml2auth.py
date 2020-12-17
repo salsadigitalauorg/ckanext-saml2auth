@@ -52,6 +52,14 @@ def acs():
 
     # SAML username - unique
     saml_id = user_info.text
+
+    # @TODO: Remove - for debug only
+    log.error('>>>>> auth_response.ava <<<<<')
+    log.error('>>>>> auth_response.ava <<<<<')
+    log.error(auth_response.ava)
+    log.error('>>>>> auth_response.ava <<<<<')
+    log.error('>>>>> auth_response.ava <<<<<')
+
     # Required user attributes for user creation
     email = auth_response.ava[saml_user_email][0]
     firstname = auth_response.ava[saml_user_firstname][0]
