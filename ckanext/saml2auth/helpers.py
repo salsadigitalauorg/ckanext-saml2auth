@@ -106,7 +106,7 @@ def update_user_organasitions(user, saml_groups):
                 org_role = organisation.get('role', None)
                 if org_name not in organisations_added and add_organisation_member(context, user, org_name, org_role):
                     # If adding organisation member was successful we add it to the list as only 1 (the highest) role is assigned per organisation
-                    log.debug('Member role '{0}' was successfully added to organisation '{1}'.format(org_role, org_name))
+                    log.debug('Member role "{0}" was successfully added to organisation "{1}".format(org_role, org_name))
                     organisations_added.append(org_name)
 
 
