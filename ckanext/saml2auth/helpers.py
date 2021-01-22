@@ -91,16 +91,23 @@ def update_user_organasitions(user, saml_groups):
     # Remove user's access from its current organisations, saml2 groups are the source of truth
     remove_user_from_all_organisations(context, organisation_list_for_user, user)
     # Load organisation_mapping config from CKAN.INI which will be in JSON format
+    # The order of the organisation_mapping config values should be sorted with highest role priority mapping first
     organisation_mapping = get_organisation_mapping()
     log.debug('Using organisation_mapping: {0}'.format(organisation_mapping))
 
     if isinstance(organisation_mapping, dict) and isinstance(saml_groups, list):
-        for saml_group in saml_groups:
-            log.debug('Checking SAML group: {0}'.format(saml_group))
-            if saml_group in organisation_mapping:
-                organisation = organisation_mapping[saml_group]
+        organisations_added = []
+        for org_map in organisation_mapping:
+            log.debug('Checking organisation_mapping: {0}'.format(org_map))
+            if org_map in saml_groups:
+                organisation = organisation_mapping[org_map]
                 log.debug('SAML group found in organisation_mapping: {0}'.format(organisation))
-                add_organisation_member(context, user, organisation.get('org_name', None), organisation.get('role', None))
+                org_name = organisation.get('org_name', None)
+                org_role = organisation.get('role', None)
+                if org_name not in organisations_added and add_organisation_member(context, user, org_name, org_role):
+                    # If adding organisation member was successful we add it to the list as only 1 (the highest) role is assigned per organisation
+                    log.debug('Member role '{0}' was successfully added to organisation '{1}'.format(org_role, org_name))
+                    organisations_added.append(org_name)
 
 
 def remove_user_from_all_organisations(context, organisation_list_for_user, user):
@@ -129,5 +136,7 @@ def add_organisation_member(context, user, org_name, role):
         }
         log.debug('Adding {0} member role to organasation: {1}'.format(user, member_dict))
         get_action('organization_member_create')(context, member_dict)
+        return True
     else:
         log.debug('Role does not exist in roles list: {0}'.format(role))
+        return False
