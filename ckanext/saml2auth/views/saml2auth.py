@@ -76,8 +76,7 @@ def acs():
         # If there is not configuration set up for config for organisation_mapping or read_only_saml_groups, it will return True to carry on login workflow
         if not h.saml_group_mapping_exist(groups):
             log.warning('User {0} {1} groups {2} does not exists'.format(firstname, lastname, groups))
-            toolkit.h.flash_error(toolkit._('Not authorized'))
-            return toolkit.h.redirect_to('user.login')
+            return toolkit.h.redirect_to('saml2auth.unauthorised', firstName=firstname, lastName=lastname, email=email)
 
     # Check if CKAN-SAML user exists for the current SAML login
     saml_user = model.Session.query(model.User) \
@@ -185,8 +184,22 @@ def disable_default_login_register():
     return base.render(u'error_document_template.html', extra_vars), 403
 
 
+def unauthorised():
+    firstName = request.params.get('firstName', None)
+    lastName = request.params.get('lastName', None)
+    email = request.params.get('email', None)
+    extra_vars = {
+        u'code': [403],
+        u'name': u'Not Authorised', 
+        u'content': u' User {0} {1} with email {2} is not a member of any authenticated AD group'.format(firstName, lastName, email)
+    }
+    return base.render(u'error_document_template.html', extra_vars)
+
+
 saml2auth.add_url_rule(u'/acs', view_func=acs, methods=[u'GET', u'POST'])
 saml2auth.add_url_rule(u'/user/saml2login', view_func=saml2login)
+saml2auth.add_url_rule(u'/user/unauthorised', view_func=unauthorised)
+
 if not h.is_default_login_enabled():
     saml2auth.add_url_rule(
         u'/user/login', view_func=disable_default_login_register)
