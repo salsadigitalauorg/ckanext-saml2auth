@@ -9,7 +9,14 @@ from saml2.config import Config as Saml2Config
 
 import ckan.model as model
 import ckan.authz as authz
-from ckan.plugins.toolkit import config, asbool, aslist, get_action, get_converter
+from ckan.plugins.toolkit import (
+    config,
+    asbool,
+    aslist,
+    get_action,
+    get_converter,
+    get_validator
+)
 
 log = logging.getLogger(__name__)
 
@@ -22,8 +29,16 @@ def saml_client(config):
 
 
 def generate_password():
-    alphabet = string.ascii_letters + string.digits
-    password = ''.join(secrets.choice(alphabet) for i in range(8))
+    while True:
+        alphabet = string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
+        password = ''.join(secrets.choice(alphabet) for i in range(12))
+        # Occasionally it won't meet the constraints, so check
+        errors = {}
+        errors[('password',)] = []
+        get_validator('user_password_validator')('password', {'password': password}, errors, None)
+        if len(errors[('password',)]) == 0:
+            # If there are no errors it must be a valid password
+            break
     return password
 
 
