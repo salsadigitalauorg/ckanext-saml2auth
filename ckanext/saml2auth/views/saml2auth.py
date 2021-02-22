@@ -70,8 +70,7 @@ def acs():
         # groups = ['CG-FED-DDCAT-SDK-Read', 'CG-FED-DDCAT-SDK-ED1']
         groups = auth_response.ava.get(saml_user_group, [])
         log.debug('Looking for SAML group with value: {}'.format(saml_user_group))
-        log.debug('SAML groups found: {}'.format(auth_response.ava[saml_user_group]))
-        # saml_user_group = [group for group in $auth_response.ava[saml_user_group]]
+        log.debug('SAML groups found: {}'.format(groups))
         # If saml group does not exist in config for organisation_mapping or read_only_saml_groups, do not create/update/login in user
         # If there is not configuration set up for config for organisation_mapping or read_only_saml_groups, it will return True to carry on login workflow
         if not h.saml_group_mapping_exist(groups):
