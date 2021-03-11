@@ -48,7 +48,7 @@ def is_default_login_enabled():
                    False))
 
 
-def update_user_sysadmin_status(username, email):
+def update_user_sysadmin_status(username, email, in_sysadmin_group=False):
     sysadmins_list = aslist(
         config.get('ckanext.saml2auth.sysadmins_list'))
     user = model.User.by_name(text_type(username))
@@ -62,6 +62,15 @@ def update_user_sysadmin_status(username, email):
         user.sysadmin = True
         model.Session.add(user)
         model.Session.commit()
+    elif sysadmin and not in_sysadmin_group:
+        user.sysadmin = False
+        model.Session.add(user)
+        model.Session.commit()
+    elif not sysadmin and in_sysadmin_group:
+        user.sysadmin = True
+        model.Session.add(user)
+        model.Session.commit()
+    
 
 
 def activate_user_if_deleted(userobj):
