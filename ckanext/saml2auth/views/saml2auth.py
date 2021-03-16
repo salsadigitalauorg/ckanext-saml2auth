@@ -42,6 +42,8 @@ def acs():
         config.get(u'ckanext.saml2auth.user_email')
     saml_user_group = \
         config.get(u'ckanext.saml2auth.user_group', None)
+    saml_sysadmin_group = \
+        config.get(u'ckanext.saml2auth.saml_sysadmin_group', None)
 
     client = h.saml_client(sp_config())
     auth_response = client.parse_authn_request_response(
@@ -65,6 +67,7 @@ def acs():
     firstname = auth_response.ava[saml_user_firstname][0]
     lastname = auth_response.ava[saml_user_lastname][0]
     groups = None
+    in_saml_sysadmin_group = False
     # If saml_user_group is configured, user cannot login with out a successful SAML group mapping to either organisation_mapping or read_only_saml_groups
     if saml_user_group:
         # groups = ['CG-FED-DDCAT-SDK-Read', 'CG-FED-DDCAT-SDK-ED1']
@@ -73,7 +76,10 @@ def acs():
         log.debug('SAML groups found: {}'.format(groups))
         # If saml group does not exist in config for organisation_mapping or read_only_saml_groups, do not create/update/login in user
         # If there is not configuration set up for config for organisation_mapping or read_only_saml_groups, it will return True to carry on login workflow
-        if not h.saml_group_mapping_exist(groups):
+        if saml_sysadmin_group and saml_sysadmin_group in groups:
+            in_saml_sysadmin_group = True
+            groups = None
+        elif not h.saml_group_mapping_exist(groups):
             log.warning('User {0} {1} groups {2} does not exists'.format(firstname, lastname, groups))
             return toolkit.h.redirect_to('saml2auth.unauthorised', firstName=firstname, lastName=lastname, email=email)
 
@@ -149,7 +155,7 @@ def acs():
 
     # If user email is in given list of emails
     # make that user sysadmin and opposite
-    h.update_user_sysadmin_status(g.user, email)
+    h.update_user_sysadmin_status(g.user, email, in_saml_sysadmin_group)
 
     g.userobj = model.User.by_name(g.user)
     # log the user in programmatically
