@@ -51,7 +51,9 @@ def acs():
         entity.BINDING_HTTP_POST)
     auth_response.get_identity()
     user_info = auth_response.get_subject()
-
+    log.error('>>>>> auth_response.get_subject <<<<<')
+    log.error(user_info)
+    log.error('>>>>> auth_response.get_subject <<<<<')
     # SAML username - unique
     saml_id = user_info.text
 
@@ -63,9 +65,12 @@ def acs():
     log.error('>>>>> auth_response.ava <<<<<')
 
     # Required user attributes for user creation
-    email = auth_response.ava[saml_user_email][0]
-    firstname = auth_response.ava[saml_user_firstname][0]
-    lastname = auth_response.ava[saml_user_lastname][0]
+    # Use saml_id if user_email mapping fails
+    email = auth_response.ava.get(saml_user_email, [saml_id])[0]
+    # Use first part of email address if user_firstname mapping fails
+    firstname = auth_response.ava.get(saml_user_firstname, [email.split('@')[0]])[0]
+    # Use last part of email address if user_lastname mapping fails
+    lastname = auth_response.ava.get(saml_user_lastname, [email.split('@')[-1]])[0]
     groups = None
     in_saml_sysadmin_group = False
     # If saml_user_group is configured, user cannot login with out a successful SAML group mapping to either organisation_mapping or read_only_saml_groups
