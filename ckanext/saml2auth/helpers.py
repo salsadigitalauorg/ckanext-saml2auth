@@ -54,11 +54,15 @@ def update_user_sysadmin_status(username, email, in_sysadmin_group=False):
     user = model.User.by_name(text_type(username))
     sysadmin = authz.is_sysadmin(username)
 
-    if sysadmin and email not in sysadmins_list:
+    # For the additional in_sysadmin_group checks to work we should only
+    # test if the email is in sysadmins_list if sysadmins_list is set
+    if sysadmin and sysadmins_list and email not in sysadmins_list:
         user.sysadmin = False
         model.Session.add(user)
         model.Session.commit()
-    elif not sysadmin and email in sysadmins_list:
+    # For the additional in_sysadmin_group checks to work we should only
+    # test if the email is in sysadmins_list if sysadmins_list is set
+    elif not sysadmin and sysadmins_list and email in sysadmins_list:
         user.sysadmin = True
         model.Session.add(user)
         model.Session.commit()
