@@ -1,4 +1,22 @@
 # -*- coding: utf-8 -*-
+
+"""
+Copyright (c) 2020 Keitaro AB
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
 from codecs import open  # To use a consistent encoding
@@ -7,7 +25,7 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the relevant file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
@@ -16,19 +34,19 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # http://packaging.python.org/en/latest/tutorial.html#version
-    version='0.0.1',
+    version='1.2.0',
 
     description='''An extension to enable Single Sign On(SSO) for CKAN data portals via SAML2 Authentication.''',
     long_description=long_description,
-    long_description_content_type='text/x-rst',
+    long_description_content_type='text/markdown',
 
     # The project's main homepage.
-    url='https://github.com/duskobogdanovski/'\
+    url='https://github.com/keitaroinc/'\
             'ckanext-saml2auth',
 
     # Author details
-    author='''Keitaro''',
-    author_email='''dusko.bogdanovski@keitaro.com''',
+    author='''Keitaro Inc''',
+    author_email='''info@keitaro.com''',
 
     # Choose your license
     license='AGPL',
@@ -39,27 +57,29 @@ setup(
         # 3 - Alpha
         # 4 - Beta
         # 5 - Production/Stable
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
 
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: GNU Affero General Public License v3 or'\
-        'later (AGPLv3+)',
+        'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3 :: Only',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
 
 
     # What does your project relate to?
-    keywords='''CKAN saml2 sso''',
+    keywords='''CKAN ckanext saml2 sso''',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
     namespace_packages=['ckanext'],
 
-    install_requires=['pysaml2>=6.3.0'],
+    install_requires=['pysaml2>=6.5.1'],
 
     # If there are data files included in your packages that need to be
     # installed, specify them here.  If using Python 2.6 or less, then these
@@ -81,6 +101,9 @@ setup(
     entry_points='''
         [ckan.plugins]
         saml2auth=ckanext.saml2auth.plugin:Saml2AuthPlugin
+
+        # Test plugins
+        test_saml2auth=ckanext.saml2auth.tests.test_interface:ExampleISaml2AuthPlugin
 
         [babel.extractors]
         ckan = ckan.lib.extract:extract_ckan

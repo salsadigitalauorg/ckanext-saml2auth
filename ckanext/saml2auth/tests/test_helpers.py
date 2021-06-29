@@ -1,4 +1,22 @@
 # encoding: utf-8
+
+"""
+Copyright (c) 2020 Keitaro AB
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
 import pytest
 
 import ckan.authz as authz
@@ -50,7 +68,7 @@ def test_01_update_user_sysadmin_status_make_sysadmin():
 
 
 @pytest.mark.usefixtures(u'clean_db', u'clean_index')
-@pytest.mark.ckan_config(u'ckanext.saml2auth.sysadmins_list', '')
+@pytest.mark.ckan_config(u'ckanext.saml2auth.sysadmins_list', 'differentuser@example.com')
 def test_02_update_user_sysadmin_status_remove_sysadmin_role():
 
     user = factories.Sysadmin(email=u'useroneemail@example.com')
@@ -81,3 +99,23 @@ def test_activate_user_if_deleted():
     user.delete()
     h.activate_user_if_deleted(user)
     assert not user.is_deleted()
+
+
+@pytest.mark.usefixtures(u'clean_db')
+def test_ensure_unique_user_name_existing_user():
+
+    user = factories.User(
+        name='existing-user',
+        email=u'existing-user@example.com'
+    )
+
+    user_name = h.ensure_unique_username_from_email(user['email'])
+
+    assert user_name != user['email'].split('@')[0]
+    assert user_name.startswith(user['email'].split('@')[0])
+
+
+def test_ensure_unique_user_name_non_existing_user():
+
+    user_name = h.ensure_unique_username_from_email('non-existing-user@example.com')
+    assert user_name == 'non-existing-user'

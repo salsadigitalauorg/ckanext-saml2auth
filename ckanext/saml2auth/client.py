@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-
+# encoding: utf-8
 """
 Copyright (c) 2020 Keitaro AB
 
@@ -16,8 +15,21 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+import logging
+from saml2.client import Saml2Client
 
-pytest_plugins = [
-    u'ckan.tests.pytest_ckan.ckan_setup',
-    u'ckan.tests.pytest_ckan.fixtures',
-]
+from ckanext.saml2auth.spconfig import get_config as sp_config
+
+log = logging.getLogger(__name__)
+
+
+class Saml2Client(Saml2Client):
+
+    def do_logout(self, *args, **kwargs):
+        if not kwargs.get('expected_binding'):
+            try:
+                kwargs['expected_binding'] = sp_config()[u'logout_expected_binding']
+            except AttributeError:
+                log.warning('ckanext.saml2auth.logout_expected_binding'
+                            'is not defined. Default binding will be used.')
+        return super().do_logout(*args, **kwargs)

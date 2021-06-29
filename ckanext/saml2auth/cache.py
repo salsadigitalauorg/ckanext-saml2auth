@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-
+# encoding: utf-8
 """
 Copyright (c) 2020 Keitaro AB
 
@@ -16,8 +15,30 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+import logging
 
-pytest_plugins = [
-    u'ckan.tests.pytest_ckan.ckan_setup',
-    u'ckan.tests.pytest_ckan.fixtures',
-]
+from saml2.ident import code, decode
+
+log = logging.getLogger(__name__)
+
+
+def set_subject_id(session, subject_id):
+    session['_saml2_subject_id'] = code(subject_id)
+
+
+def get_subject_id(session):
+    try:
+        return decode(session['_saml2_subject_id'])
+    except KeyError:
+        return None
+
+
+def set_saml_session_info(session, saml_session_info):
+    session['_saml_session_info'] = saml_session_info
+
+
+def get_saml_session_info(session):
+    try:
+        return session['_saml_session_info']
+    except KeyError:
+        return None
