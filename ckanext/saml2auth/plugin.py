@@ -22,7 +22,6 @@ from saml2.client_base import LogoutError
 from saml2 import entity
 
 from flask import session, redirect, make_response
-from flask_login import logout_user
 
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
@@ -34,6 +33,9 @@ from ckanext.saml2auth.cache import get_subject_id, get_saml_session_info
 from ckanext.saml2auth.spconfig import get_config as sp_config
 from ckanext.saml2auth import helpers as h
 from saml2.s_utils import UnsupportedBinding
+
+if toolkit.check_ckan_version(min_version="2.10"):
+    from flask_login import logout_user
 
 log = logging.getLogger(__name__)
 
@@ -104,8 +106,12 @@ class Saml2AuthPlugin(plugins.SingletonPlugin):
             domain = h.get_site_domain_for_cookie()
             # Clear session cookie in the browser
             response.set_cookie('ckan', domain=domain, expires=0)
-            # logout user from CKAN
-            logout_user()
+            if toolkit.check_ckan_version(min_version="2.10"):
+                # logout user from CKAN
+                logout_user()
+                field_name = toolkit.config.get("WTF_CSRF_FIELD_NAME")
+                if session.get(field_name):
+                    session.pop(field_name)
 
             if not toolkit.check_ckan_version(min_version="2.10"):
                 # CKAN <= 2.9.x also sets auth_tkt cookie
