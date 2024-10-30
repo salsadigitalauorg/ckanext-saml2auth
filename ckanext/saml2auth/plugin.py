@@ -22,6 +22,7 @@ from saml2.client_base import LogoutError
 from saml2 import entity
 
 from flask import session, redirect, make_response
+from flask_login import logout_user
 
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
@@ -103,6 +104,8 @@ class Saml2AuthPlugin(plugins.SingletonPlugin):
             domain = h.get_site_domain_for_cookie()
             # Clear session cookie in the browser
             response.set_cookie('ckan', domain=domain, expires=0)
+            # logout user from CKAN
+            logout_user()
 
             if not toolkit.check_ckan_version(min_version="2.10"):
                 # CKAN <= 2.9.x also sets auth_tkt cookie
