@@ -114,6 +114,8 @@ class Saml2AuthPlugin(plugins.SingletonPlugin):
         else:
             log.info(u'No user was logged in!')
 
+        session.clear()
+        
         return response
 
 
