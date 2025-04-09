@@ -24,8 +24,7 @@ log = logging.getLogger(__name__)
 
 def set_subject_id(session, subject_id):
     log.debug('Setting subject_id in session: %s', subject_id)
-    session['_saml2_subject_id'] = code(subject_id)
-    log.debug('Encoded subject_id: %s', session['_saml2_subject_id'])
+    session['_saml2_subject_id'] = subject_id
 
 
 def get_subject_id(session):
