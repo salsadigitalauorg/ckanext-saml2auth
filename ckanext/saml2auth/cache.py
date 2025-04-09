@@ -22,31 +22,59 @@ from saml2.ident import code, decode
 log = logging.getLogger(__name__)
 
 
+def encode_value(value):
+    """
+    Encode a value if it's not already encoded
+    """
+    try:
+        # Try to decode the value - if it succeeds, it's already encoded
+        decode(value)
+        # Return the original value since it's already encoded
+        log.debug(f'{value} was already encoded')
+        return value
+    except Exception:
+        # If decoding fails, it's not encoded yet, so encode it
+        log.debug(f'{value} was encoded')
+        return code(value)
+
+
+def decode_value(value):
+    """
+    Decode a value if it's encoded, otherwise return as is
+    """
+    if value is None:
+        return None
+    try:
+        # Try to decode the value
+        decoded = decode(value)
+        log.debug(f'{value} was decoded')
+        return decoded
+    except Exception:
+        # If decoding fails, it's not encoded, return as is
+        log.debug(f'{value} was not encoded')
+        return value
+
+
 def set_subject_id(session, subject_id):
-    log.debug('Setting subject_id in session: %s', subject_id)
-    session['_saml2_subject_id'] = subject_id
+    session['_saml2_subject_id'] = encode_value(subject_id)
 
 
 def get_subject_id(session):
     try:
-        return decode(session['_saml2_subject_id'])
+        return decode_value(session['_saml2_subject_id'])
     except KeyError:
         return None
 
 
 def set_saml_session_info(session, saml_session_info):
-    log.debug('Setting SAML session info in session: %s', saml_session_info)
-    saml_session_info['name_id'] = code(saml_session_info['name_id'])
-    log.debug('Encoded name_id: %s', saml_session_info['name_id'])
+    saml_session_info['name_id'] = encode_value(saml_session_info['name_id'])
     session['_saml_session_info'] = saml_session_info
 
 
 def get_saml_session_info(session):
     try:
-        log.debug('Retrieving SAML session info from session')
         saml_session_info = session['_saml_session_info']
-        saml_session_info['name_id'] = decode(saml_session_info['name_id'])
-        log.debug('Decoded name_id: %s', saml_session_info['name_id'])
+        saml_session_info['name_id'] = decode_value(saml_session_info['name_id'])
         return saml_session_info
     except KeyError:
         return None
