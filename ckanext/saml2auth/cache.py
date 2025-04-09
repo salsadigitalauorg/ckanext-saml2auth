@@ -32,11 +32,9 @@ def encode_value(value):
         # Try to decode the value - if it succeeds, it's already encoded
         decode(value)
         # Return the original value since it's already encoded
-        log.debug(f'{value} was already encoded')
         return value
     except Exception:
         # If decoding fails, it's not encoded yet, so encode it
-        log.debug(f'{value} was encoded')
         return code(value)
 
 
@@ -49,11 +47,9 @@ def decode_value(value):
     try:
         # Try to decode the value
         decoded = decode(value)
-        log.debug(f'{value} was decoded')
         return decoded
     except Exception:
         # If decoding fails, it's not encoded, return as is
-        log.debug(f'{value} was not encoded')
         return value
 
 
