@@ -26,6 +26,8 @@ def encode_value(value):
     """
     Encode a value if it's not already encoded
     """
+    if value is None:
+        return None
     try:
         # Try to decode the value - if it succeeds, it's already encoded
         decode(value)
