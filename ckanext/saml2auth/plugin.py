@@ -109,6 +109,9 @@ class Saml2AuthPlugin(plugins.SingletonPlugin):
             if toolkit.check_ckan_version(min_version="2.10"):
                 # logout user from CKAN
                 logout_user()
+                # Clear saml2auth session
+                session.pop('_saml2_subject_id', None)
+                session.pop('_saml_session_info', None)
                 field_name = toolkit.config.get("WTF_CSRF_FIELD_NAME")
                 if session.get(field_name):
                     session.pop(field_name)
