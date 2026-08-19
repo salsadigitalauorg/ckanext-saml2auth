@@ -84,23 +84,31 @@ class TestBlueprint(object):
             h[1] for h in response.headers
             if h[0].lower() == 'set-cookie']
         # Sample for CKAN 2.11
-        # ['ckan=; Domain=test.ckan.net; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/']
+        # ['ckan=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0;
+        #   HttpOnly; Path=/; SameSite=Lax']
 
         # Starting 2.10, CKAN's SessionMiddleware will append a
         # new Set-cookie header on every first response from the server.
-        # This includes test requests.
-        # For CKAN 2.11, we only get the session cookie is named 'ckan'
-        if toolkit.check_ckan_version(min_version='2.11'):
-            assert len(cookie_headers) == 1
-        else:
-            assert len(cookie_headers) == 2
+        # This includes test requests, so the number of headers varies and
+        # only the 'ckan' ones are of interest here.
+        ckan_cookies = []
+        for header in cookie_headers:
+            cookie = SimpleCookie()
+            cookie.load(header)
+            ckan_cookies.extend(
+                morsel for name, morsel in cookie.items() if name == 'ckan')
 
-        first_cookie = cookie_headers[0]
+        # Exactly one, see #107: a second, domain scoped 'ckan' header did
+        # not match the cookie held by the browser and the session survived
+        # logout.
+        assert len(ckan_cookies) == 1
 
-        cookie = SimpleCookie()
-        cookie.load(first_cookie)
-        cookie_name = [name for name in cookie.keys()][0]
-        assert cookie_name == 'ckan'
-        assert cookie[cookie_name]['domain'] == 'test.ckan.net'
-        cookie_date = date_parse(cookie[cookie_name]['expires'], ignoretz=True)
+        ckan_cookie = ckan_cookies[0]
+        cookie_date = date_parse(ckan_cookie['expires'], ignoretz=True)
         assert cookie_date < datetime.datetime.now()
+
+        # On CKAN 2.10 and higher this is the Flask session cookie, expired
+        # by Flask itself when the session is cleared, so it is scoped to
+        # the host rather than to the site domain.
+        if not toolkit.check_ckan_version(min_version='2.10'):
+            assert ckan_cookie['domain'] == 'test.ckan.net'

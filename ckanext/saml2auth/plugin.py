@@ -100,14 +100,12 @@ class Saml2AuthPlugin(plugins.SingletonPlugin):
 
         response = _perform_slo()
 
-        if response:
+        if response and not toolkit.check_ckan_version(min_version="2.10"):
+            # CKAN <= 2.9.x does not manage these cookies through Flask,
+            # so they have to be expired explicitly here.
             domain = h.get_site_domain_for_cookie()
-            # Clear session cookie in the browser
             response.set_cookie('ckan', domain=domain, expires=0)
-
-            if not toolkit.check_ckan_version(min_version="2.10"):
-                # CKAN <= 2.9.x also sets auth_tkt cookie
-                response.set_cookie('auth_tkt', domain=domain, expires=0)
+            response.set_cookie('auth_tkt', domain=domain, expires=0)
 
         if g.userobj:
             log.info(u'User {0}<{1}> logged out successfully'.format(g.userobj.name, g.userobj.email))
@@ -115,6 +113,11 @@ class Saml2AuthPlugin(plugins.SingletonPlugin):
             log.info(u'No user was logged in!')
 
         if toolkit.check_ckan_version(min_version="2.10"):
+            # Clearing the session marks it as modified, so Flask expires
+            # the 'ckan' session cookie itself. Expiring it manually as
+            # well produced a second, domain scoped 'ckan' header that did
+            # not match the cookie the browser holds, and the session
+            # survived logout. See #107.
             session.clear()
 
         return response
