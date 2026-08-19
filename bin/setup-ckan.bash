@@ -1,14 +1,22 @@
 #!/bin/bash
 set -e
 
+# Timestamp every line so a slow or hanging step is identifiable from the
+# job log alone. Without this the script emits a handful of coarse echoes
+# and there is no way to tell which command is taking the time.
+PS4='+ [$(date -u +%H:%M:%S)] '
+set -x
+
 echo "This is setup-ckan.bash..."
 
 echo "Installing the packages that CKAN requires..."
-sudo apt-get update -qq
-sudo apt-get install xmlsec1 libxmlsec1-dev
+sudo apt-get update
+sudo apt-get install -y xmlsec1 libxmlsec1-dev
 
 echo "Installing CKAN and its Python dependencies..."
-git clone https://github.com/ckan/ckan
+# Wrapped in timeout so a stalled network fetch fails with a clear message
+# instead of holding the runner until the six hour job limit.
+timeout 300 git clone https://github.com/ckan/ckan
 cd ckan
 if [ $CKANVERSION == 'master' ]
 then
@@ -32,9 +40,9 @@ then
     pip install setuptools==39.0.1
 fi
 
-python setup.py develop
-pip install -r requirements.txt
-pip install -r dev-requirements.txt
+timeout 600 python setup.py develop
+timeout 900 pip install -r requirements.txt
+timeout 900 pip install -r dev-requirements.txt
 cd -
 
 echo "Creating the PostgreSQL user and database..."
@@ -47,9 +55,9 @@ ckan -c test-core.ini db init
 cd -
 
 echo "Installing saml2 requirements..."
-pip install -r dev-requirements.txt
+timeout 900 pip install -r dev-requirements.txt
 echo "Installing ckanext-saml2auth..."
-pip install -e .
+timeout 600 pip install -e .
 
 echo "Moving test.ini into a subdir..."
 mkdir subdir

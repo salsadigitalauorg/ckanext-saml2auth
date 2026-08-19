@@ -11,6 +11,7 @@ on:
 jobs:
   code_quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v3
 
@@ -30,6 +31,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -105,6 +107,7 @@ jobs:
   publish:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v3
 
@@ -132,6 +135,7 @@ jobs:
   coveralls_finish:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
     - name: Coveralls Finished
       uses: AndreMiras/coveralls-python-action@develop
