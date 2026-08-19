@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from jinja2 import Template
 import os
 import pytest
@@ -59,6 +59,12 @@ def _prepare_unsigned_response():
         'destination': 'http://test.ckan.net/acs',
         'recipient': 'http://test.ckan.net/acs',
         'issue_instant': datetime.now().isoformat(),
+        # Rendered relative to now so the assertion does not expire on a
+        # fixed date. A hardcoded value here silently broke the whole suite
+        # once it passed, see the SubjectConfirmationData in unsigned0.xml.
+        'not_on_or_after': (
+            datetime.now(timezone.utc) + timedelta(hours=1)
+        ).strftime('%Y-%m-%dT%H:%M:%SZ'),
     }
     t = Template(unsigned_response)
     final_response = t.render(**context)
@@ -131,7 +137,6 @@ class TestGetRequest:
 
         if response.status_code != 200:
             assert False, f'Failed test_unsigned_request: {response.body}'
-            # Can&#39;t use response, too old (now=2024-07-31T17:42:38Z + slack=0 &gt; not_on_or_after=2024-01-18T06:21:48Z
 
         assert 200 == response.status_code
 
