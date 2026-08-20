@@ -20,7 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import pytest
 
-from ckan.plugins import toolkit
 from ckan.plugins.toolkit import url_for
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -64,51 +63,53 @@ class TestBlueprint(object):
     @pytest.mark.ckan_config(u'ckanext.saml2auth.idp_metadata.location', u'local')
     @pytest.mark.ckan_config(u'ckanext.saml2auth.idp_metadata.local_path',
                              os.path.join(extras_folder, 'provider2', 'idp.xml'))
-    @pytest.mark.usefixtures('with_request_context')
+    @pytest.mark.ckan_config(u'ckanext.saml2auth.enable_ckan_internal_login',
+                             True)
     def test_ckan_cookie_cleared_on_slo(self, app):
 
-        url = url_for('user.logout')
-
-        import datetime
         from unittest import mock
         from http.cookies import SimpleCookie
         from flask import make_response
-        from dateutil.parser import parse as date_parse
+        import ckan.tests.factories as factories
 
-        with mock.patch(
-            'ckanext.saml2auth.plugin._perform_slo',
-                return_value=make_response('')):
-            response = app.get(url=url, follow_redirects=False)
+        password = u'RandomPassword123'
+        user = factories.User(password=password)
 
-        cookie_headers = [
-            h[1] for h in response.headers
-            if h[0].lower() == 'set-cookie']
-        # Sample for CKAN 2.11
-        # ['ckan=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0;
-        #   HttpOnly; Path=/; SameSite=Lax']
+        # One client for the whole flow. app.get() and app.post() each build
+        # a new test client, so cookies would not carry between requests.
+        client = app.test_client()
+        client.post(url_for(u'user.login'),
+                    data={u'login': user[u'name'], u'password': password})
 
-        # Starting 2.10, CKAN's SessionMiddleware will append a
-        # new Set-cookie header on every first response from the server.
-        # This includes test requests, so the number of headers varies and
-        # only the 'ckan' ones are of interest here.
+        # Confirm the session authenticates before logging out, otherwise
+        # the assertions below would pass on a session that never existed.
+        before = client.get(u'/dashboard/datasets', follow_redirects=False)
+        assert before.status_code == 200
+
+        # side_effect rather than return_value: make_response() needs an
+        # application context, which only exists once the request is handled.
+        with mock.patch('ckanext.saml2auth.plugin._perform_slo',
+                        side_effect=lambda: make_response('')):
+            response = client.get(url_for(u'user.logout'),
+                                  follow_redirects=False)
+
         ckan_cookies = []
-        for header in cookie_headers:
+        for header in [h[1] for h in response.headers
+                       if h[0].lower() == 'set-cookie']:
             cookie = SimpleCookie()
             cookie.load(header)
             ckan_cookies.extend(
                 morsel for name, morsel in cookie.items() if name == 'ckan')
 
-        # Exactly one, see #107: a second, domain scoped 'ckan' header did
-        # not match the cookie held by the browser and the session survived
-        # logout.
+        # Exactly one. Two 'ckan' headers scoped differently is what #107
+        # reports, where the one the browser held was not the one cleared.
         assert len(ckan_cookies) == 1
 
-        ckan_cookie = ckan_cookies[0]
-        cookie_date = date_parse(ckan_cookie['expires'], ignoretz=True)
-        assert cookie_date < datetime.datetime.now()
-
-        # On CKAN 2.10 and higher this is the Flask session cookie, expired
-        # by Flask itself when the session is cleared, so it is scoped to
-        # the host rather than to the site domain.
-        if not toolkit.check_ckan_version(min_version='2.10'):
-            assert ckan_cookie['domain'] == 'test.ckan.net'
+        # The session must no longer authenticate. Asserting this rather
+        # than the shape of the cookie, because the two supported CKAN
+        # versions clear it by different means: 2.11 expires the Flask
+        # session cookie, while on 2.10 Beaker replaces it with a fresh
+        # cookie holding an empty session, so there is no expiry to assert.
+        after = client.get(u'/dashboard/datasets', follow_redirects=False)
+        assert after.status_code == 302
+        assert 'user/login' in after.headers['Location']
