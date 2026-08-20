@@ -21,6 +21,7 @@ jobs:
   repo_scan:
     name: repo_scan
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       # Required for uploading SARIF results to the Security tab

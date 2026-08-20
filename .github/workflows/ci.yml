@@ -11,6 +11,7 @@ on:
 jobs:
   code_quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v3
 
@@ -30,6 +31,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -97,14 +99,21 @@ jobs:
           pytest --ckan-ini=subdir/test.ini --cov=ckanext.saml2auth --disable-warnings ckanext/saml2auth/tests
       
       - name: Coveralls
-        uses: AndreMiras/coveralls-python-action@develop
+        # Pinned to the current develop commit (2024-09-26). The action's
+        # last release is v20201129, so @develop is what everyone uses, but
+        # unpinned it means CI runs whatever lands on that branch.
+        uses: AndreMiras/coveralls-python-action@ac868b9540fad490f7ca82b8ca00480fd751ed19
         with:
           parallel: true
-          flag-name: Python ${{ matrix.python-version }} Unit Test
+          # The CKAN version belongs in the flag: without it the two
+          # python 3.10 jobs report under the same name and collide, so the
+          # aggregate is built from an inconsistent set of legs.
+          flag-name: Python ${{ matrix.python-version }} CKAN ${{ matrix.ckan-version }} Unit Test
 
   publish:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v3
 
@@ -132,8 +141,9 @@ jobs:
   coveralls_finish:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
     - name: Coveralls Finished
-      uses: AndreMiras/coveralls-python-action@develop
+      uses: AndreMiras/coveralls-python-action@ac868b9540fad490f7ca82b8ca00480fd751ed19
       with:
         parallel-finished: true
