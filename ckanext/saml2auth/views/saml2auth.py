@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
 import copy
 
-from flask import Blueprint, session
+from flask import Blueprint, current_app, session
 from saml2 import entity
 from saml2.authn_context import requested_authn_context
 from sqlalchemy.sql import func
@@ -300,16 +300,52 @@ def _log_user_into_ckan(resp):
     """
     if toolkit.check_ckan_version(min_version="2.10"):
         from ckan.common import login_user
+        # Never log a user into the session the browser arrived with: issue a
+        # fresh session id first and rotate the CSRF token afterwards, exactly
+        # as CKAN core does in its own login views (CKAN 2.10.11,
+        # GHSA-6499-jgj4-2wpf). Without this the SAML login path is open to
+        # session fixation.
+        _regenerate_session()
         login_user(g.userobj)
-        return
-
-    if toolkit.check_ckan_version(min_version="2.9.6"):
-        user_id = "{},1".format(g.userobj.id)
+        _rotate_csrf_token()
     else:
-        user_id = g.userobj.name
-    set_repoze_user(user_id, resp)
+        if toolkit.check_ckan_version(min_version="2.9.6"):
+            user_id = "{},1".format(g.userobj.id)
+        else:
+            user_id = g.userobj.name
+        set_repoze_user(user_id, resp)
 
     log.info(u'User {0}<{1}> logged in successfully'.format(g.userobj.name, g.userobj.email))
+
+
+def _regenerate_session():
+    """Give the session a new id before the user is logged in.
+
+    Mirrors ``ckan.views.user.regenerate_session``: CKAN >= 2.10.11 exposes
+    ``session_interface.regenerate`` and is left to decide what happens to
+    the session data (Beaker cookie sessions start empty; server-side
+    sessions such as CKAN 2.11's redis backend keep their data and only
+    rotate the id). Older 2.10.x Beaker sessions fall back to
+    ``invalidate()``; anything else is cleared so a signed client-side
+    cookie cannot be reused. Callers must not rely on data being dropped.
+    """
+    regenerate = getattr(current_app.session_interface, 'regenerate', None)
+    if regenerate is not None:
+        regenerate(session)
+    elif hasattr(session, 'invalidate'):
+        session.invalidate()
+    else:
+        session.clear()
+
+
+def _rotate_csrf_token():
+    """Drop the pre-login CSRF token so a new one is issued after login."""
+    from flask_wtf.csrf import generate_csrf
+
+    field_name = config.get('WTF_CSRF_FIELD_NAME') or '_csrf_token'
+    if session.get(field_name):
+        session.pop(field_name)
+        generate_csrf()
 
 
 def saml2login():
