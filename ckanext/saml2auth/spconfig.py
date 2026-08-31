@@ -60,6 +60,17 @@ def get_config():
         asbool(ckan_config.get(u'ckanext.saml2auth.logout_requests_signed', False))
     logout_expected_binding = ckan_config.get(u'ckanext.saml2auth.logout_expected_binding',
                                               entity.BINDING_HTTP_POST)
+    # Sign AuthnRequests when a signing key is configured, unless the
+    # option is set explicitly. Some IdPs reject signed requests they
+    # are not configured to expect, so this must stay overridable.
+    # Checked against None rather than using a get() fallback, because
+    # declared options are pre-populated and would mask the fallback.
+    _authn_requests_signed = ckan_config.get(
+        u'ckanext.saml2auth.authn_requests_signed')
+    if _authn_requests_signed is None:
+        authn_requests_signed = bool(key_file)
+    else:
+        authn_requests_signed = asbool(_authn_requests_signed)
 
     config = {
         u'entityid': entity_id,
@@ -77,7 +88,8 @@ def get_config():
                 u'want_response_signed': response_signed,
                 u'want_assertions_signed': assertion_signed,
                 u'want_assertions_or_response_signed': any_signed,
-                u'logout_requests_signed': logout_requests_signed
+                u'logout_requests_signed': logout_requests_signed,
+                u'authn_requests_signed': authn_requests_signed
             }
         },
         u'logout_expected_binding': logout_expected_binding,

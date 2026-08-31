@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from jinja2 import Template
 import os
 import pytest
@@ -58,7 +58,13 @@ def _prepare_unsigned_response():
         'entity_id': 'urn:gov:gsa:SAML:2.0.profiles:sp:sso:test:entity',
         'destination': 'http://test.ckan.net/acs',
         'recipient': 'http://test.ckan.net/acs',
-        'issue_instant': datetime.now().isoformat()
+        'issue_instant': datetime.now().isoformat(),
+        # Rendered relative to now so the assertion does not expire on a
+        # fixed date. A hardcoded value here silently broke the whole suite
+        # once it passed, see the SubjectConfirmationData in unsigned0.xml.
+        'not_on_or_after': (
+            datetime.now(timezone.utc) + timedelta(hours=1)
+        ).strftime('%Y-%m-%dT%H:%M:%SZ'),
     }
     t = Template(unsigned_response)
     final_response = t.render(**context)
@@ -117,7 +123,21 @@ class TestGetRequest:
         data = {
             'SAMLResponse': encoded_response
         }
-        response = app.post(url=url, params=data)
+        try:
+            response = app.post(url=url, params=data)
+        except Exception as e:
+            # decode the response
+            import base64
+            decoded = base64.b64decode(encoded_response)
+            raise Exception(
+                f'Error test_unsigned_request: {e}\n'
+                f'encoded_response: {decoded}\n'
+                f'url: {url}\n'
+            )
+
+        if response.status_code != 200:
+            assert False, f'Failed test_unsigned_request: {response.body}'
+
         assert 200 == response.status_code
 
     def render_file(self, path, context, save_as=None):
