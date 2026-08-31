@@ -34,12 +34,10 @@ from ckanext.saml2auth.spconfig import get_config as sp_config
 from ckanext.saml2auth import helpers as h
 from saml2.s_utils import UnsupportedBinding
 
-if toolkit.check_ckan_version(min_version="2.10"):
-    from flask_login import logout_user
-
 log = logging.getLogger(__name__)
 
 
+@toolkit.blanket.config_declarations
 class Saml2AuthPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IConfigurer)
     plugins.implements(plugins.IBlueprint)
@@ -51,8 +49,8 @@ class Saml2AuthPlugin(plugins.SingletonPlugin):
 
     def get_helpers(self):
         return {
-            'is_default_login_enabled':
-                h.is_default_login_enabled
+            'is_default_login_enabled': h.is_default_login_enabled,
+            'get_saml2auth_login_button_text': h.get_saml2auth_login_button_text,
         }
 
     # IConfigurable
@@ -102,28 +100,17 @@ class Saml2AuthPlugin(plugins.SingletonPlugin):
 
         response = _perform_slo()
 
-        if response:
-            domain = h.get_site_domain_for_cookie()
-            # Clear session cookie in the browser
-            response.set_cookie('ckan', domain=domain, expires=0)
-            if toolkit.check_ckan_version(min_version="2.10"):
-                # logout user from CKAN
-                logout_user()
-                # Clear saml2auth session
-                session.pop('_saml2_subject_id', None)
-                session.pop('_saml_session_info', None)
-                field_name = toolkit.config.get("WTF_CSRF_FIELD_NAME")
-                if session.get(field_name):
-                    session.pop(field_name)
-
-            if not toolkit.check_ckan_version(min_version="2.10"):
-                # CKAN <= 2.9.x also sets auth_tkt cookie
-                response.set_cookie('auth_tkt', domain=domain, expires=0)
-
         if g.userobj:
             log.info(u'User {0}<{1}> logged out successfully'.format(g.userobj.name, g.userobj.email))
         else:
             log.info(u'No user was logged in!')
+
+        # Clearing the session marks it as modified, so Flask expires the
+        # 'ckan' session cookie itself. Expiring it manually as well
+        # produced a second, domain scoped 'ckan' header that did not match
+        # the cookie the browser holds, and the session survived logout.
+        # See #107.
+        session.clear()
 
         return response
 

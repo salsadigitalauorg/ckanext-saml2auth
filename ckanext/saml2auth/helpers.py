@@ -23,7 +23,6 @@ import re
 import random
 import secrets
 from six import text_type
-from six.moves.urllib.parse import urlparse
 
 from ckanext.saml2auth.client import Saml2Client
 
@@ -110,14 +109,10 @@ def get_location(http_info):
         return http_info['url']
 
 
-def get_site_domain_for_cookie():
-    '''Return the domain part of the site URL
-
-    When running on localhost (or any single word host), browsers will
-    ignore the `Domain` bit in the Set-Cookie header (and Werkzeug will
-    not allow you to set it), so we return None on this case.
-    '''
-    site_url = toolkit.config.get('ckan.site_url')
-    parsed_url = urlparse(site_url)
-    host = parsed_url.netloc.split(':')[0]
-    return host if '.' in host else None
+def get_saml2auth_login_button_text():
+    """
+    Returns the configured text for the SAML2 login button.
+    Defaults to 'SSO' if not configured.
+    """
+    text = toolkit.config.get('ckanext.saml2auth.login_button_text', 'SSO')
+    return text

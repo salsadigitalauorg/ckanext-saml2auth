@@ -18,61 +18,52 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
 
 from saml2.ident import code, decode
+from saml2.saml import NameID
 
 log = logging.getLogger(__name__)
 
 
-def encode_value(value):
-    """
-    Encode a value if it's not already encoded
-    """
-    if value is None:
-        return None
-    try:
-        # Try to decode the value - if it succeeds, it's already encoded
-        decode(value)
-        # Return the original value since it's already encoded
-        return value
-    except Exception:
-        # If decoding fails, it's not encoded yet, so encode it
-        return code(value)
-
-
-def decode_value(value):
-    """
-    Decode a value if it's encoded, otherwise return as is
-    """
-    if value is None:
-        return None
-    try:
-        # Try to decode the value
-        decoded = decode(value)
-        return decoded
-    except Exception:
-        # If decoding fails, it's not encoded, return as is
-        return value
-
-
 def set_subject_id(session, subject_id):
-    session['_saml2_subject_id'] = encode_value(subject_id)
+    if isinstance(subject_id, str):
+        session['_saml2_subject_id'] = subject_id
+    else:
+        session['_saml2_subject_id'] = code(subject_id)
 
 
 def get_subject_id(session):
     try:
-        return decode_value(session['_saml2_subject_id'])
+        return decode(session['_saml2_subject_id'])
     except KeyError:
         return None
 
 
 def set_saml_session_info(session, saml_session_info):
-    saml_session_info['name_id'] = encode_value(saml_session_info['name_id'])
+    """Adds information about pysaml2 AuthnResponse to CKAN's session.
+
+    `pysaml2` returns a NameID object in the session_info() call. Since we want
+    to serialize the object to write it into the cookie we need to convert it.
+    `name_id` is the same as `_saml2_subject_id` so we apply `code` as we do in
+    `set_subject_id`.
+
+    We are not sure if it always return an object, so we checking to be sure.
+    """
+    if isinstance(saml_session_info['name_id'], NameID):
+        saml_session_info['name_id'] = code(saml_session_info['name_id'])
     session['_saml_session_info'] = saml_session_info
 
 
 def get_saml_session_info(session):
+    """Returns the saml session info from the session object.
+
+    The session object is serializable but pysaml expect a NameID object as
+    name_id, so we are decoding it again as we do in get_subject_id.
+    """
     try:
-        saml_session_info = session['_saml_session_info']
-        saml_session_info['name_id'] = decode_value(saml_session_info['name_id'])
-        return saml_session_info
+        session_info = session['_saml_session_info']
     except KeyError:
         return None
+
+    if isinstance(session_info['name_id'], str):
+        session_info['name_id'] = decode(session_info['name_id'])
+
+    return session_info
