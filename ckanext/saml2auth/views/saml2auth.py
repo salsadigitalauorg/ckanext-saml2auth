@@ -29,8 +29,7 @@ import ckan.model as model
 import ckan.plugins as plugins
 import ckan.lib.dictization.model_dictize as model_dictize
 from ckan.lib import base, signals
-from ckan.views.user import set_repoze_user
-from ckan.common import config, g, request
+from ckan.common import config, g, request, login_user
 
 from ckanext.saml2auth.spconfig import get_config as sp_config
 from ckanext.saml2auth import helpers as h
@@ -289,31 +288,20 @@ def acs():
 
 
 def _log_user_into_ckan(resp):
-    """ Log the user into different CKAN versions.
+    """ Log the user in using CKAN's flask-login based session.
 
-    CKAN 2.10 introduces flask-login and login_user method.
-
-    CKAN 2.9.6 added a security change and identifies the user
-    with the internal id plus a serial autoincrement (currently static).
-
-    CKAN <= 2.9.5 identifies the user only using the internal id.
+    Requires CKAN >= 2.10, which introduced flask-login and login_user().
+    Older CKAN versions (<= 2.9.x) used the now-removed set_repoze_user()
+    shim and are no longer supported.
     """
-    if toolkit.check_ckan_version(min_version="2.10"):
-        from ckan.common import login_user
-        # Never log a user into the session the browser arrived with: issue a
-        # fresh session id first and rotate the CSRF token afterwards, exactly
-        # as CKAN core does in its own login views (CKAN 2.10.11,
-        # GHSA-6499-jgj4-2wpf). Without this the SAML login path is open to
-        # session fixation.
-        _regenerate_session()
-        login_user(g.userobj)
-        _rotate_csrf_token()
-    else:
-        if toolkit.check_ckan_version(min_version="2.9.6"):
-            user_id = "{},1".format(g.userobj.id)
-        else:
-            user_id = g.userobj.name
-        set_repoze_user(user_id, resp)
+    # Never log a user into the session the browser arrived with: issue a
+    # fresh session id first and rotate the CSRF token afterwards, exactly
+    # as CKAN core does in its own login views (CKAN 2.10.11,
+    # GHSA-6499-jgj4-2wpf). Without this the SAML login path is open to
+    # session fixation.
+    _regenerate_session()
+    login_user(g.userobj)
+    _rotate_csrf_token()
 
     log.info(u'User {0}<{1}> logged in successfully'.format(g.userobj.name, g.userobj.email))
 
