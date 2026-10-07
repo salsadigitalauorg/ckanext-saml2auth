@@ -276,7 +276,7 @@ def acs():
 
     resp = toolkit.redirect_to(redirect_target)
 
-    _log_user_into_ckan(resp)
+    _log_user_into_ckan()
 
     set_saml_session_info(session, session_info)
     set_subject_id(session, session_info['name_id'])
@@ -287,7 +287,7 @@ def acs():
     return resp
 
 
-def _log_user_into_ckan(resp):
+def _log_user_into_ckan():
     """ Log the user in using CKAN's flask-login based session.
 
     Requires CKAN >= 2.10, which introduced flask-login and login_user().
