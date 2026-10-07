@@ -49,6 +49,9 @@ if [ -f requirement-setuptools.txt ]
 then
     echo "Updating setuptools..."
     pip install -r requirement-setuptools.txt
+else
+    # Python 3.12+ no longer bundles setuptools, which setup.py needs.
+    pip install setuptools
 fi
 
 if [ $CKANVERSION == '2.7' ]
