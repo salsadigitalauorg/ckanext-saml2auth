@@ -7,8 +7,8 @@ A [CKAN](https://ckan.org) extension to enable Single Sign-On (SSO) for CKAN dat
 
 ## Requirements
 
-This extension works with CKAN 2.10+
-Note: For CKAN 2.9 or older use v1.3.0 or older versions.
+This extension is tested with CKAN 2.11 (Python 3.12) and CKAN 2.12 (Python 3.14).
+CKAN 2.10 is no longer tested. For CKAN 2.9 or older use v1.3.0 or older versions.
 
 ## Installation
 
@@ -232,7 +232,7 @@ to PyPI follow these steps:
   [3]: https://gitter.im/keitaroinc/ckan?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
   [Pypi]: https://img.shields.io/pypi/v/ckanext-saml2auth
   [4]: https://pypi.org/project/ckanext-saml2auth
-  [Python]: https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11-blue
+  [Python]: https://img.shields.io/badge/python-3.12%20|%203.14-blue
   [5]: https://www.python.org
-  [CKAN]: https://img.shields.io/badge/ckan-2.10%20|%202.11-yellow
+  [CKAN]: https://img.shields.io/badge/ckan-2.11%20|%202.12-yellow
   [6]: https://www.ckan.org

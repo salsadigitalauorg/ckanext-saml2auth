@@ -2,11 +2,11 @@ name: CI
 
 on:
   push:
-    branches: main
+    branches: [main, develop]
     tags:
       - 'v*'
   pull_request:
-    branches: main
+    branches: [main, develop]
 
 jobs:
   code_quality:
@@ -35,13 +35,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10']  # TODO '3.11'
-        ckan-version: ["2.10", "2.11"]
-        exclude:
-          # CKAN 2.11 pins greenlet==3.3.1, which requires Python 3.10 or
-          # newer, so this combination cannot install its dependencies.
-          - python-version: '3.9'
+        include:
+          - python-version: '3.12'
             ckan-version: "2.11"
+          - python-version: '3.14'
+            ckan-version: "2.12"
     name: Python ${{ matrix.python-version }} CKAN ${{ matrix.ckan-version }} extension test
 
     services:

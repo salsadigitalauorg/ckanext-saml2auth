@@ -35,6 +35,10 @@ class TestDatasetViews(object):
         assert ret is not None
         assert ret['email'] == tdv_data.user1['email']
 
+    @pytest.mark.skipif(
+        toolkit.check_ckan_version(min_version='2.12'),
+        reason='CKAN 2.12 enforces a unique active email, so duplicates cannot exist',
+    )
     def test_get_user_by_email_multiple(self, tdv_data):
         """ The the function _get_user_by_email for duplicated emails """
         # Generate a duplciate email

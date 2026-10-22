@@ -1,3 +1,5 @@
 flake8    # for the CI build
 pysaml2
+# pysaml2's cert helper (used by the tests) calls crypto.X509Req, removed in pyOpenSSL 26.
+pyopenssl<26
 packaging>=22.0
